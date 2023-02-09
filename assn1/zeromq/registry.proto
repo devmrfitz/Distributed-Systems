@@ -1,0 +1,96 @@
+syntax = "proto2";
+
+package tutorial;
+
+
+
+enum RequestType {
+  REGISTER = 0;
+  GET_SERVER_LIST = 1;
+  JOIN_SERVER = 2;
+  LEAVE_SERVER = 3;
+  GET_ARTICLES = 4;
+  PUBLISH_ARTICLE = 5;
+}
+
+message ArticleRequest {
+  enum ArticleType {
+    SPORTS = 0;
+    FASHION = 1;
+    POLITICS = 2;
+  }
+  optional ArticleType type = 1;
+  optional string author = 2;
+  optional string time = 3;
+}
+
+message Article {
+  optional ArticleRequest article = 1;
+  optional string content = 2;
+}
+
+message Request {
+  optional RequestType type = 1;
+  oneof request_oneof {
+    RegisterRequest registerRequest = 2;
+    GetServerListRequest getServerListRequest = 3;
+    JoinServerRequest joinServerRequest = 4;
+    LeaveServerRequest leaveServerRequest = 5;
+    GetArticlesRequest getArticlesRequest = 6;
+    PublishArticleRequest publishArticleRequest = 7;
+ }
+
+
+  message RegisterRequest {
+    optional string name = 1;
+    optional string address = 2;
+  }
+
+  message GetServerListRequest {
+  }
+
+  message JoinServerRequest {
+    optional string uuid = 1;
+  }
+
+  message LeaveServerRequest {
+    optional string uuid = 1;
+  }
+
+  message GetArticlesRequest {
+    optional ArticleRequest articleRequest = 1;
+  }
+
+  message PublishArticleRequest {
+    optional Article article = 1;
+  }
+}
+
+message Response {
+    enum ResponseType {
+        ARTICLE = 1;
+        SERVER_LIST = 2;
+    }
+
+    optional ResponseType type = 1;
+    optional bool success = 2;
+
+    oneof response_oneof {
+      GetArticlesResponse getArticlesResponse = 3;
+      ServerListResponse serverListResponse = 4;
+    }
+
+    message GetArticlesResponse {
+      repeated Article articles = 1;
+    }
+
+    message ServerListResponse {
+      message Server {
+        optional string name = 1;
+        optional string address = 2;
+      }
+      repeated Server servers = 1;
+    }
+}
+
+

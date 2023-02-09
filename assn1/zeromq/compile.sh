@@ -1,0 +1,2 @@
+#!/bin/sh
+~/Downloads/protoc-21.12-osx-universal_binary/bin/protoc -I ~/Workspace/courses/Distributed-Systems/assn1/zeromq/ --python_out ~/Workspace/courses/Distributed-Systems/assn1/zeromq ~/Workspace/courses/Distributed-Systems/assn1/zeromq/registry.proto

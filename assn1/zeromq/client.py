@@ -22,5 +22,5 @@ for update_nbr in range(5):
     total_value += int(messagedata)
     print(topic.decode(), messagedata.decode())
 
-print("Average messagedata value for topic '%s' was %dF" % (topicfilter, total_value / 5)
-      )
+print("Average messagedata value for topic '%s' was %dF" %
+      (topicfilter, total_value / 5))
