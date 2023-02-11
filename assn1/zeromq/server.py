@@ -1,0 +1,175 @@
+
+from datetime import datetime
+from random import randint
+import zmq
+
+from constants import REGISTRY_SERVER_PORT
+import registry_pb2
+
+context = zmq.Context()
+
+
+SERVER_PORT = str(randint(10000, 60000))
+
+
+SERVER_NAME = input("Enter server name: ")
+
+MAX_CLIENTS = 10
+clientele = set()
+articles = []
+
+
+def send_register_request():
+    registry_socket = context.socket(zmq.REQ)
+    registry_socket.connect(f"tcp://localhost:{REGISTRY_SERVER_PORT}")
+
+    register_request = registry_pb2.Request()
+    register_request.type = registry_pb2.Request.RequestType.REGISTER
+    register_request.registerRequest.name = SERVER_NAME
+    register_request.registerRequest.address = f"tcp://localhost:{SERVER_PORT}"
+
+    registry_socket.send(register_request.SerializeToString())
+
+    #  Get the reply
+    message = registry_socket.recv()
+    response = registry_pb2.Response()
+    response.ParseFromString(message)
+
+    assert response.type == registry_pb2.Response.ResponseType.REGISTER
+
+    if response.success:
+        print("Registration request: SUCCESS")
+    else:
+        print("Registration request: FAIL")
+
+    registry_socket.close()
+
+
+def handle_join_server(request):
+    assert request.type == registry_pb2.Request.RequestType.JOIN_SERVER
+    print("Join server request received")
+    print(str(request))
+    response = registry_pb2.Response()
+    response.type = registry_pb2.Response.ResponseType.JOIN_SERVER
+    if len(clientele) >= MAX_CLIENTS:
+        response.success = False
+    else:
+        clientele.add(request.uuid)
+        response.success = True
+
+    return response.SerializeToString()
+
+
+def handle_leave_server(request):
+    assert request.type == registry_pb2.Request.RequestType.LEAVE_SERVER
+    print("Leave server request received")
+    print(str(request))
+    response = registry_pb2.Response()
+    response.type = registry_pb2.Response.ResponseType.LEAVE_SERVER
+    if request.uuid not in clientele:
+        response.success = False
+    else:
+        clientele.remove(request.uuid)
+        response.success = True
+
+    return response.SerializeToString()
+
+
+def handle_publish_article(request):
+    assert request.type == registry_pb2.Request.RequestType.PUBLISH_ARTICLE
+    print("Publish article request received")
+    print(str(request))
+    response = registry_pb2.Response()
+    response.type = registry_pb2.Response.ResponseType.PUBLISH_ARTICLE
+    if request.uuid not in clientele:
+        response.success = False
+    else:
+        article = request.publishArticleRequest.article
+        article.articleRequest.date = datetime.now().strftime("%d/%m/%Y")
+        articles.append(article)
+        response.success = True
+
+    return response.SerializeToString()
+
+
+def handle_get_articles(request):
+    def date_parser(date):
+        return datetime.strptime(date, "%d/%m/%Y")
+    assert request.type == registry_pb2.Request.RequestType.GET_ARTICLES
+    print("Get articles request received")
+    print(str(request))
+    response = registry_pb2.Response()
+    response.type = registry_pb2.Response.ResponseType.GET_ARTICLES
+    if request.uuid not in clientele:
+        response.success = False
+    else:
+        response.success = True
+        article_type = request.getArticlesRequest.articleRequest.type
+        author = request.getArticlesRequest.articleRequest.author
+        from_date = request.getArticlesRequest.articleRequest.date
+
+        if article_type == registry_pb2.ArticleRequest.ArticleType.UNSPECIFIED and author == "" and from_date == "":
+            response.success = False
+        else:
+            for article in articles:
+                if article_type == registry_pb2.ArticleRequest.ArticleType.UNSPECIFIED or article_type == article.articleRequest.type:
+                    if author == "" or author == article.articleRequest.author:
+                        if from_date == "" or \
+                                date_parser(from_date) <= date_parser(article.articleRequest.date):
+                            response.getArticlesResponse.articles.append(
+                                article)
+
+    return response.SerializeToString()
+
+
+request_handlers = {
+    registry_pb2.Request.RequestType.JOIN_SERVER: handle_join_server,
+    registry_pb2.Request.RequestType.LEAVE_SERVER: handle_leave_server,
+    registry_pb2.Request.RequestType.PUBLISH_ARTICLE: handle_publish_article,
+    registry_pb2.Request.RequestType.GET_ARTICLES: handle_get_articles,
+}
+
+
+def run_primary_server(primary_socket):
+    print("Running primary server")
+    while True:
+        #  Wait for next request from client
+        message = primary_socket.recv()
+
+        # Request parsing
+        request = registry_pb2.Request()
+        request.ParseFromString(message)
+
+        # TODO: Request handling
+        if request.type in request_handlers:
+            response = request_handlers[request.type](request)
+        else:
+            raise Exception("Unknown request type")
+        primary_socket.send(response)
+
+
+primary_socket = context.socket(zmq.REP)
+primary_socket.bind(f"tcp://*:{SERVER_PORT}")
+
+send_register_request()
+
+while True:
+    help_text = """
+    1. Send Register request
+    2. Run Primary server
+    3. Join another server
+    4. Exit
+    """
+    print(help_text)
+    choice = int(input("Enter your choice: "))
+    if choice == 1:
+        send_register_request()
+    elif choice == 2:
+        try:
+            run_primary_server(primary_socket)
+        except KeyboardInterrupt:
+            print("Primary server stopped")
+    elif choice == 3:
+        pass
+    elif choice == 4:
+        break

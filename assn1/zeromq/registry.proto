@@ -3,17 +3,6 @@ syntax = "proto2";
 package tutorial;
 
 
-
-enum RequestType {
-  UNSPECIFIED = 0;
-  REGISTER = 1;
-  GET_SERVER_LIST = 2;
-  JOIN_SERVER = 3;
-  LEAVE_SERVER = 4;
-  GET_ARTICLES = 5;
-  PUBLISH_ARTICLE = 6;
-}
-
 message ArticleRequest {
   enum ArticleType {
     UNSPECIFIED = 0;
@@ -23,15 +12,24 @@ message ArticleRequest {
   }
   optional ArticleType type = 1;
   optional string author = 2;
-  optional string time = 3;
+  optional string date = 3;
 }
 
 message Article {
-  optional ArticleRequest article = 1;
+  optional ArticleRequest articleRequest = 1;
   optional string content = 2;
 }
 
 message Request {
+  enum RequestType {
+    UNSPECIFIED = 0;
+    REGISTER = 1;
+    FETCH_SERVER_LIST = 2;
+    JOIN_SERVER = 3;
+    LEAVE_SERVER = 4;
+    GET_ARTICLES = 5;
+    PUBLISH_ARTICLE = 6;
+  }
   optional RequestType type = 1;
   oneof request_oneof {
     RegisterRequest registerRequest = 2;
@@ -41,6 +39,8 @@ message Request {
     GetArticlesRequest getArticlesRequest = 6;
     PublishArticleRequest publishArticleRequest = 7;
  }
+ optional string nonce = 8;
+ optional string uuid = 9;
 
   message RegisterRequest {
     optional string name = 1;
@@ -51,11 +51,9 @@ message Request {
   }
 
   message JoinServerRequest {
-    optional string uuid = 1;
   }
 
   message LeaveServerRequest {
-    optional string uuid = 1;
   }
 
   message GetArticlesRequest {
@@ -70,8 +68,12 @@ message Request {
 message Response {
     enum ResponseType {
         UNSPECIFIED = 0;
-        ARTICLE = 1;
-        SERVER_LIST = 2;
+        PUBLISH_ARTICLE = 1;
+        FETCH_SERVER_LIST = 2;
+        REGISTER = 3;
+        JOIN_SERVER = 4;
+        LEAVE_SERVER = 5;
+        GET_ARTICLES = 6;
     }
 
     optional ResponseType type = 1;
