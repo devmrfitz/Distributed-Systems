@@ -5,19 +5,21 @@ package tutorial;
 
 
 enum RequestType {
-  REGISTER = 0;
-  GET_SERVER_LIST = 1;
-  JOIN_SERVER = 2;
-  LEAVE_SERVER = 3;
-  GET_ARTICLES = 4;
-  PUBLISH_ARTICLE = 5;
+  UNSPECIFIED = 0;
+  REGISTER = 1;
+  GET_SERVER_LIST = 2;
+  JOIN_SERVER = 3;
+  LEAVE_SERVER = 4;
+  GET_ARTICLES = 5;
+  PUBLISH_ARTICLE = 6;
 }
 
 message ArticleRequest {
   enum ArticleType {
-    SPORTS = 0;
-    FASHION = 1;
-    POLITICS = 2;
+    UNSPECIFIED = 0;
+    SPORTS = 1;
+    FASHION = 2;
+    POLITICS = 3;
   }
   optional ArticleType type = 1;
   optional string author = 2;
@@ -39,7 +41,6 @@ message Request {
     GetArticlesRequest getArticlesRequest = 6;
     PublishArticleRequest publishArticleRequest = 7;
  }
-
 
   message RegisterRequest {
     optional string name = 1;
@@ -68,6 +69,7 @@ message Request {
 
 message Response {
     enum ResponseType {
+        UNSPECIFIED = 0;
         ARTICLE = 1;
         SERVER_LIST = 2;
     }
@@ -92,5 +94,3 @@ message Response {
       repeated Server servers = 1;
     }
 }
-
-
