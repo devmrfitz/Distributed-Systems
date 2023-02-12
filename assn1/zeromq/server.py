@@ -1,10 +1,12 @@
 
 from datetime import datetime
 from random import randint
+from signal import SIGKILL, pthread_kill
 import zmq
 
 from constants import REGISTRY_SERVER_PORT
 import registry_pb2
+import threading
 
 context = zmq.Context()
 
@@ -130,34 +132,36 @@ request_handlers = {
 }
 
 
+def request_coordinator(message, address, primary_socket):
+    request = registry_pb2.Request()
+    request.ParseFromString(message)
+    if request.type in request_handlers:
+        response = request_handlers[request.type](request)
+    else:
+        raise Exception("Unknown request type")
+    primary_socket.send_multipart([address, b'', response])
+
+
 def run_primary_server(primary_socket):
     print("Running primary server")
     while True:
         #  Wait for next request from client
-        message = primary_socket.recv()
+        address, _, message = primary_socket.recv_multipart()
 
-        # Request parsing
-        request = registry_pb2.Request()
-        request.ParseFromString(message)
-
-        # TODO: Request handling
-        if request.type in request_handlers:
-            response = request_handlers[request.type](request)
-        else:
-            raise Exception("Unknown request type")
-        primary_socket.send(response)
+        threading.Thread(target=request_coordinator, args=(
+            message, address, primary_socket)).start()
 
 
-primary_socket = context.socket(zmq.REP)
+primary_socket = context.socket(zmq.ROUTER)
 primary_socket.bind(f"tcp://*:{SERVER_PORT}")
 
 send_register_request()
-
+primary_server = None
 while True:
     help_text = """
     1. Send Register request
     2. Run Primary server
-    3. Join another server
+    3. Follow another server
     4. Exit
     """
     print(help_text)
@@ -165,11 +169,15 @@ while True:
     if choice == 1:
         send_register_request()
     elif choice == 2:
-        try:
-            run_primary_server(primary_socket)
-        except KeyboardInterrupt:
-            print("Primary server stopped")
+        if primary_server is not None and primary_server.ident is not None and primary_server.is_alive():
+            print("Killing old primary server")
+            pthread_kill(primary_server.ident, SIGKILL)
+        primary_server = threading.Thread(
+            target=run_primary_server, args=(primary_socket,))
+        primary_server.start()
     elif choice == 3:
         pass
     elif choice == 4:
+        if primary_server is not None and primary_server.ident is not None:
+            pthread_kill(primary_server.ident, SIGKILL)
         break

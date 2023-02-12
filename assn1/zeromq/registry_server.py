@@ -1,4 +1,5 @@
 
+import threading
 import zmq
 
 from constants import REGISTRY_SERVER_PORT
@@ -9,7 +10,7 @@ MAX_SERVERS = 10
 servers = dict()
 
 context = zmq.Context()
-socket = context.socket(zmq.REP)
+socket = context.socket(zmq.ROUTER)
 socket.bind(f"tcp://*:{REGISTRY_SERVER_PORT}")
 
 
@@ -46,14 +47,20 @@ request_handlers = {
     registry_pb2.Request.RequestType.FETCH_SERVER_LIST: handle_get_server_list_request,
 }
 
-while True:
-    #  Wait for next request from client
-    message = socket.recv()
 
+def request_coordinator(message, address, primary_socket):
     request = registry_pb2.Request()
     request.ParseFromString(message)
     if request.type in request_handlers:
         response = request_handlers[request.type](request)
     else:
         raise Exception("Unknown request type")
-    socket.send(response)
+    primary_socket.send_multipart([address, b'', response])
+
+
+while True:
+    #  Wait for next request from client
+    address, _, message = socket.recv_multipart()
+
+    threading.Thread(target=request_coordinator, args=(
+        message, address, socket)).start()

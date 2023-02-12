@@ -1,6 +1,6 @@
 syntax = "proto2";
 
-package tutorial;
+package dscd;
 
 
 message ArticleRequest {
