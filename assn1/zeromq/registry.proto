@@ -58,6 +58,7 @@ message Request {
 
   message GetArticlesRequest {
     optional ArticleRequest articleRequest = 1;
+    optional bool isSibling = 2;
   }
 
   message PublishArticleRequest {

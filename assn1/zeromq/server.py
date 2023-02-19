@@ -20,6 +20,9 @@ MAX_CLIENTS = 10
 clientele = set()
 articles = []
 
+pending_requests = set()
+followed_servers = set()
+
 
 def send_register_request():
     registry_socket = context.socket(zmq.REQ)
@@ -95,6 +98,13 @@ def handle_publish_article(request):
 
 
 def handle_get_articles(request):
+    if request.nonce in pending_requests:
+        response = registry_pb2.Response()
+        response.type = registry_pb2.Response.ResponseType.GET_ARTICLES
+        response.success = True
+        return response.SerializeToString()
+    pending_requests.add(request.nonce)
+
     def date_parser(date):
         return datetime.strptime(date, "%d/%m/%Y")
     assert request.type == registry_pb2.Request.RequestType.GET_ARTICLES
@@ -102,7 +112,7 @@ def handle_get_articles(request):
     print(str(request))
     response = registry_pb2.Response()
     response.type = registry_pb2.Response.ResponseType.GET_ARTICLES
-    if request.uuid not in clientele:
+    if request.uuid not in clientele and not request.getArticlesRequest.isSibling:
         response.success = False
     else:
         response.success = True
@@ -120,7 +130,21 @@ def handle_get_articles(request):
                                 date_parser(from_date) <= date_parser(article.articleRequest.date):
                             response.getArticlesResponse.articles.append(
                                 article)
+            for server in followed_servers:
+                socket = context.socket(zmq.REQ)
+                socket.connect(server)
+                request.getArticlesRequest.isSibling = True
+                socket.send(request.SerializeToString())
+                message = socket.recv()
+                response_recvd = registry_pb2.Response()
+                response_recvd.ParseFromString(message)
 
+                assert response_recvd.type == registry_pb2.Response.ResponseType.GET_ARTICLES
+
+                response.getArticlesResponse.articles.extend(
+                    response_recvd.getArticlesResponse.articles)
+
+    pending_requests.remove(request.nonce)
     return response.SerializeToString()
 
 
@@ -130,6 +154,48 @@ request_handlers = {
     registry_pb2.Request.RequestType.PUBLISH_ARTICLE: handle_publish_article,
     registry_pb2.Request.RequestType.GET_ARTICLES: handle_get_articles,
 }
+
+
+def follow_server():
+    def fetch_server_list():
+        servers = []
+        registry_socket = context.socket(zmq.REQ)
+        registry_socket.connect(f"tcp://localhost:{REGISTRY_SERVER_PORT}")
+
+        request = registry_pb2.Request()
+        request.type = registry_pb2.Request.RequestType.FETCH_SERVER_LIST
+
+        registry_socket.send(request.SerializeToString())
+
+        #  Get the reply
+        message = registry_socket.recv()
+        response = registry_pb2.Response()
+        response.ParseFromString(message)
+
+        assert response.type == registry_pb2.Response.ResponseType.FETCH_SERVER_LIST
+
+        if response.success:
+            print("Fetch server list request: SUCCESS")
+            print("Server list:")
+            for server in response.serverListResponse.servers:
+                if server.address == f"tcp://localhost:{SERVER_PORT}":
+                    continue
+                print(server.name, server.address)
+                servers.append(server)
+        else:
+            print("Fetch server list request: FAIL")
+
+        registry_socket.close()
+        return servers
+
+    servers = fetch_server_list()
+    print("Available servers:")
+    for i, server in enumerate(servers):
+        print(f"{i+1}. {server.name}({server.address})")
+    choice = int(input("Enter your choice: "))
+    server = servers[choice-1]
+    followed_servers.add(server.address)
+    print(f"Following {server.name}({server.address})")
 
 
 def request_coordinator(message, address, primary_socket):
@@ -156,7 +222,23 @@ primary_socket = context.socket(zmq.ROUTER)
 primary_socket.bind(f"tcp://*:{SERVER_PORT}")
 
 send_register_request()
+
+
 primary_server = None
+
+
+def trigger_primary_server(primary_server):
+    if primary_server is not None and primary_server.ident is not None and primary_server.is_alive():
+        print("Killing old primary server")
+        pthread_kill(primary_server.ident, SIGKILL)
+    primary_server = threading.Thread(
+        target=run_primary_server, args=(primary_socket,))
+    primary_server.start()
+    return primary_server
+
+
+primary_server = trigger_primary_server(primary_server)
+
 while True:
     help_text = """
     1. Send Register request
@@ -169,14 +251,9 @@ while True:
     if choice == 1:
         send_register_request()
     elif choice == 2:
-        if primary_server is not None and primary_server.ident is not None and primary_server.is_alive():
-            print("Killing old primary server")
-            pthread_kill(primary_server.ident, SIGKILL)
-        primary_server = threading.Thread(
-            target=run_primary_server, args=(primary_socket,))
-        primary_server.start()
+        primary_server = trigger_primary_server(primary_server)
     elif choice == 3:
-        pass
+        follow_server()
     elif choice == 4:
         if primary_server is not None and primary_server.ident is not None:
             pthread_kill(primary_server.ident, SIGKILL)

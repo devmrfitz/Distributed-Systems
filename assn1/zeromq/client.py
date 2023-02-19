@@ -1,6 +1,4 @@
 
-from datetime import datetime
-from random import randint
 import zmq
 
 from constants import REGISTRY_SERVER_PORT
@@ -11,8 +9,8 @@ context = zmq.Context()
 
 servers = []
 
-uuid = str(uuid.uuid4())
-print(f"UUID: {uuid}")
+client_uuid = str(uuid.uuid4())
+print(f"UUID: {client_uuid}")
 
 
 def fetch_server_list():
@@ -20,7 +18,7 @@ def fetch_server_list():
     registry_socket.connect(f"tcp://localhost:{REGISTRY_SERVER_PORT}")
 
     request = registry_pb2.Request()
-    request.uuid = uuid
+    request.uuid = client_uuid
     request.type = registry_pb2.Request.RequestType.FETCH_SERVER_LIST
 
     registry_socket.send(request.SerializeToString())
@@ -33,11 +31,14 @@ def fetch_server_list():
     assert response.type == registry_pb2.Response.ResponseType.FETCH_SERVER_LIST
 
     if response.success:
+        global servers
         print("Fetch server list request: SUCCESS")
         print("Server list:")
+        servers = []
         for server in response.serverListResponse.servers:
             print(server.name, server.address)
             servers.append(server)
+        print(servers)
     else:
         print("Fetch server list request: FAIL")
 
@@ -57,7 +58,7 @@ def join_server():
     socket.connect(server.address)
 
     request = registry_pb2.Request()
-    request.uuid = uuid
+    request.uuid = client_uuid
     request.type = registry_pb2.Request.RequestType.JOIN_SERVER
 
     socket.send(request.SerializeToString())
@@ -88,7 +89,7 @@ def leave_server():
     socket.connect(server.address)
 
     request = registry_pb2.Request()
-    request.uuid = uuid
+    request.uuid = client_uuid
     request.type = registry_pb2.Request.RequestType.LEAVE_SERVER
 
     socket.send(request.SerializeToString())
@@ -137,11 +138,13 @@ def get_articles():
     date = input("Enter date in DD/MM/YYYY format or leave blank: ")
 
     request = registry_pb2.Request()
-    request.uuid = uuid
+    request.uuid = client_uuid
     request.type = registry_pb2.Request.RequestType.GET_ARTICLES
     request.getArticlesRequest.articleRequest.type = article_type
     request.getArticlesRequest.articleRequest.author = author
     request.getArticlesRequest.articleRequest.date = date
+
+    request.nonce = str(uuid.uuid4())
 
     socket.send(request.SerializeToString())
 
@@ -188,7 +191,7 @@ def publish_article():
     content = input("Enter article content: ")
 
     request = registry_pb2.Request()
-    request.uuid = uuid
+    request.uuid = client_uuid
     request.type = registry_pb2.Request.RequestType.PUBLISH_ARTICLE
     request.publishArticleRequest.article.articleRequest.type = article_type
     request.publishArticleRequest.article.content = content
