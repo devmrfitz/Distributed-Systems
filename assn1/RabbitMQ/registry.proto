@@ -1,0 +1,103 @@
+syntax = "proto2";
+
+message ArticleRequest {
+  enum ArticleType {
+    UNSPECIFIED = 0;
+    SPORTS = 1;
+    FASHION = 2;
+    POLITICS = 3;
+  }
+  optional ArticleType type = 1;
+  optional string author = 2;
+  optional string date = 3;
+}
+
+message Article {
+  optional ArticleRequest articleRequest = 1;
+  optional string content = 2;
+}
+
+message Request {
+  enum RequestType {
+    UNSPECIFIED = 0;
+    REGISTER = 1;
+    FETCH_SERVER_LIST = 2;
+    JOIN_SERVER = 3;
+    LEAVE_SERVER = 4;
+    GET_ARTICLES = 5;
+    PUBLISH_ARTICLE = 6;
+    FOLLOW=7;
+  }
+  
+  oneof request_oneof {
+    RegisterRequest registerRequest = 2;
+    GetServerListRequest getServerListRequest = 3;
+    JoinServerRequest joinServerRequest = 4;
+    LeaveServerRequest leaveServerRequest = 5;
+    GetArticlesRequest getArticlesRequest = 6;
+    PublishArticleRequest publishArticleRequest = 7;
+    Follow follow = 10;
+  }
+  
+  optional RequestType type = 1;
+  optional string nonce = 8;
+  optional string uuid = 9;
+
+  message RegisterRequest {
+    optional string name = 1;
+    optional string bindingkey = 2;
+
+  }
+  message Follow {
+  }
+
+  message GetServerListRequest {
+  }
+
+  message JoinServerRequest {
+  }
+
+  message LeaveServerRequest {
+  }
+
+  message GetArticlesRequest {
+    optional ArticleRequest articleRequest = 1;
+  }
+
+  message PublishArticleRequest {
+    optional Article article = 1;
+  }
+}
+
+message Response {
+    enum ResponseType {
+        UNSPECIFIED = 0;
+        PUBLISH_ARTICLE = 1;
+        FETCH_SERVER_LIST = 2;
+        REGISTER = 3;
+        JOIN_SERVER = 4;
+        LEAVE_SERVER = 5;
+        GET_ARTICLES = 6;
+        FOLLOW=8;
+    }
+
+    optional ResponseType type = 1;
+    optional bool success = 2;
+
+    oneof response_oneof {
+      GetArticlesResponse getArticlesResponse = 3;
+      ServerListResponse serverListResponse = 4;
+    }
+
+    message GetArticlesResponse {
+      repeated Article articles = 1;
+    }
+
+    message ServerListResponse {
+      message Server {
+        optional string name = 1;
+        optional string bindingkey = 2;
+      }
+      repeated Server servers = 1;
+    }
+}

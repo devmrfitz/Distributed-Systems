@@ -1,0 +1,147 @@
+syntax = "proto3";
+
+package grpc;
+//import "google/protobuf/timestamp.proto";
+//Article Format
+//You must define your own proto for an article. The article includes the following.
+//1) Type - one of [SPORTS, FASHION, POLITICS] use oneof datatype (for gRPC) to check
+//fields automatically.
+//2) Author - a string of characters for the author's name
+//3) Time - Time when the message was received at the server
+//4) Content - a string of a maximum of 200 characters.
+
+message ArticleRequest{
+  enum ArticleType {
+    UNSPECIFIED = 0;
+    SPORTS = 1;
+    FASHION = 2;
+    POLITICS = 3;
+  }
+
+  optional string author = 1;
+  optional string date = 2;
+  optional ArticleType type = 3;
+}
+
+message Article {
+  optional ArticleRequest articleRequest = 1;
+  optional string content = 3;
+}
+
+message Request {
+  enum RequestType {
+    UNSPECIFIED = 0;
+    REGISTER = 1;
+    FETCH_SERVER_LIST = 2;
+    JOIN_SERVER = 3;
+    LEAVE_SERVER = 4;
+    GET_ARTICLES = 5;
+    PUBLISH_ARTICLE = 6;
+  }
+  optional RequestType type = 1;
+  oneof request_oneof {
+    RegisterRequest registerRequest = 2;
+    GetServerListRequest getServerListRequest = 3;
+    JoinServerRequest joinServerRequest = 4;
+    LeaveServerRequest leaveServerRequest = 5;
+    GetArticlesRequest getArticlesRequest = 6;
+    PublishArticleRequest publishArticleRequest = 7;
+ }
+ string nonce = 8;
+ string uuid = 9;
+
+  message RegisterRequest {
+    optional string name = 1;
+    optional string address = 2;
+  }
+
+  message GetServerListRequest {
+    optional string name = 1;
+    optional string address = 2;
+  }
+
+  message JoinServerRequest {
+    optional string uuid = 1;
+  }
+
+  message LeaveServerRequest {
+    optional string uuid = 1;
+  }
+
+  message GetArticlesRequest {
+    optional ArticleRequest articleRequest = 1;
+  }
+
+  message PublishArticleRequest {
+    optional Article article = 1;
+  }
+}
+
+message Response {
+    enum ResponseType {
+        UNSPECIFIED = 0;
+        PUBLISH_ARTICLE = 1;
+        FETCH_SERVER_LIST = 2;
+        REGISTER = 3;
+        JOIN_SERVER = 4;
+        LEAVE_SERVER = 5;
+        GET_ARTICLES = 6;
+    }
+
+    optional ResponseType type = 1; //(1, 3, 4, 5)
+    optional bool success = 2;
+
+    oneof response_oneof {
+      GetServerListResponse getServerListResponse = 3; //fetch server list (2)
+      GetArticlesResponse getArticlesResponse = 4; //get articles (6)
+    }
+
+    message GetServerListResponse {
+      message Server {
+        optional string name = 1;
+        optional string address = 2;
+      }
+      repeated Server servers = 1;
+    }
+
+    message GetArticlesResponse {
+      repeated Article articles = 1;
+    }
+
+    message ServerListResponse {
+      message Server {
+        optional string name = 1;
+        optional string address = 2;
+      }
+      repeated Server servers = 1;
+    }
+}
+
+service RegistryServer {
+  rpc Register(Request) returns (Response);
+  rpc FetchServerList(Request) returns (Response);
+}
+
+//service ServerListService {
+//  rpc GetServerList(Request) returns (Response);
+//}
+
+service Server {
+  rpc JoinServer(Request) returns (Response);
+  rpc LeaveServer(Request) returns (Response);
+  rpc GetArticles(Request) returns (Response);
+  rpc PublishArticle(Request) returns (Response);
+}
+
+//service LeaveServerService {
+//  rpc LeaveServer(Request) returns (Response);
+//}
+//
+//service GetArticlesService {
+//  rpc GetArticles(Request) returns (Response);
+//}
+//
+//service PublishArticleService {
+//  rpc PublishArticle(Request) returns (Response);
+//}
+
