@@ -222,16 +222,16 @@ while True:
     6. Exit
     """
     print(help_text)
-    choice = int(input("Enter your choice: "))
-    if choice == 1:
+    choice = (input("Enter your choice: "))
+    if choice == "1":
         fetch_server_list()
-    elif choice == 2:
+    elif choice == "2":
         join_server()
-    elif choice == 3:
+    elif choice == "3":
         leave_server()
-    elif choice == 4:
+    elif choice == "4":
         get_articles()
-    elif choice == 5:
+    elif choice == "5":
         publish_article()
-    elif choice == 6:
+    elif choice == "6":
         break
