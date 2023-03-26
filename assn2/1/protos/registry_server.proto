@@ -14,8 +14,8 @@ message RegisterResponse {
 }
 
 message FetchServerListResponse {
-    repeated string ip = 1;
-    repeated int32 port = 2;
+    repeated string serverList = 1;
+    bool success = 2;
 }
 
 service RegistryServer {
