@@ -2,6 +2,11 @@ syntax = "proto3";
 
 package grpc;
 
+message SimpleResponse {
+    string status = 1;
+    bool success = 2;
+}
+
 message WriteRequest {
     string name = 1;
     string content = 2;
@@ -11,13 +16,37 @@ message WriteRequest {
 message WriteResponse {
     string status = 1;
     string uuid = 2;
-    string timestamp = 3;
+    string version = 3;
+    bool success = 4;
+}
+
+message ReadRequest {
+    string uuid = 2;
+}
+
+message ReadResponse {
+    string status = 1;
+    string name = 2;
+    string content = 3;
+    string version = 4;
+    bool success = 5;
+}
+
+message DeleteRequest {
+    string uuid = 1;
+}
+
+message ReplicateWriteRequest {
+    string name = 1;
+    string content = 2;
+    string uuid = 3;
+    string version = 4;
 }
 
 service Server {
     rpc Write(WriteRequest) returns (WriteResponse);
     rpc Read(ReadRequest) returns (ReadResponse);
-    rpc Delete(DeleteRequest) returns (DeleteResponse);
-    rpc ReplicateWrite(ReplicateWriteRequest) returns (ReplicateWriteResponse);
-    rpc ReplicateDelete(ReplicateDeleteRequest) returns (ReplicateDeleteResponse);
+    rpc Delete(DeleteRequest) returns (SimpleResponse);
+    rpc ReplicateWrite(ReplicateWriteRequest) returns (SimpleResponse);
+    rpc ReplicateDelete(DeleteRequest) returns (SimpleResponse);
 }
