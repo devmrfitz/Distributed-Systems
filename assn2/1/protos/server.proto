@@ -43,10 +43,16 @@ message ReplicateWriteRequest {
     string version = 4;
 }
 
+message AddReplicaServerRequest {
+    string ip = 1;
+    int32 port = 2;
+}
+
 service Server {
     rpc Write(WriteRequest) returns (WriteResponse);
     rpc Read(ReadRequest) returns (ReadResponse);
     rpc Delete(DeleteRequest) returns (SimpleResponse);
     rpc ReplicateWrite(ReplicateWriteRequest) returns (SimpleResponse);
     rpc ReplicateDelete(DeleteRequest) returns (SimpleResponse);
+    rpc AddReplicaServer(AddReplicaServerRequest) returns (SimpleResponse);
 }

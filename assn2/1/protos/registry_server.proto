@@ -2,7 +2,23 @@ syntax = "proto3";
 
 package grpc;
 
+message RegisterRequest {
+    string ip = 1;
+    int32 port = 2;
+}
+
+message RegisterResponse {
+    bool success = 1;
+    string primaryIp = 2;
+    int32 primaryPort = 3;
+}
+
+message FetchServerListResponse {
+    repeated string ip = 1;
+    repeated int32 port = 2;
+}
+
 service RegistryServer {
     rpc Register(RegisterRequest) returns (RegisterResponse);
-    rpc FetchServerList(FetchServerListRequest) returns (FetchServerListResponse);
-  }
+    rpc FetchServerList() returns (FetchServerListResponse);
+}
