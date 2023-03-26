@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package grpc;
+
+message WriteRequest {
+    string name = 1;
+    string content = 2;
+    string uuid = 3;
+}
+
+message WriteResponse {
+    string status = 1;
+    string uuid = 2;
+    string timestamp = 3;
+}
+
+service Server {
+    rpc Write(WriteRequest) returns (WriteResponse);
+    rpc Read(ReadRequest) returns (ReadResponse);
+    rpc Delete(DeleteRequest) returns (DeleteResponse);
+    rpc ReplicateWrite(ReplicateWriteRequest) returns (ReplicateWriteResponse);
+    rpc ReplicateDelete(ReplicateDeleteRequest) returns (ReplicateDeleteResponse);
+}

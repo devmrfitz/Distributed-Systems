@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package grpc;
+
+service RegistryServer {
+    rpc Register(RegisterRequest) returns (RegisterResponse);
+    rpc FetchServerList(FetchServerListRequest) returns (FetchServerListResponse);
+  }
