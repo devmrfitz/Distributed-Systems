@@ -16,7 +16,7 @@ SERVER_PORT = str(randint(10000, 60000))
 SERVER_UUID = str(uuid.uuid4())
 
 
-class Server(registry_server_pb2_grpc.ServerServicer):
+class Server(server_pb2_grpc.ServerServicer):
 
     def __init__(self) -> None:
         super().__init__()
@@ -144,11 +144,12 @@ def trigger_primary_server(primary_server, grpc_server):
 
 
 def serve():
+    global primary_server
     os.mkdir(f"serverData/{SERVER_UUID}")
     server_obj = Server()
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    registry_server_pb2_grpc.add_ServerServicer_to_server(server_obj, server)
+    server_pb2_grpc.add_ServerServicer_to_server(server_obj, server)
     server.add_insecure_port(f"localhost:{SERVER_PORT}")
 
     primary_server = trigger_primary_server(primary_server, server)
