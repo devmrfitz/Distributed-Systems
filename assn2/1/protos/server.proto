@@ -36,6 +36,11 @@ message DeleteRequest {
     string uuid = 1;
 }
 
+message ReplicateDeleteRequest {
+    string uuid = 1;
+    string version = 2;
+}
+
 message ReplicateWriteRequest {
     string name = 1;
     string content = 2;
@@ -50,9 +55,11 @@ message AddReplicaServerRequest {
 
 service Server {
     rpc Write(WriteRequest) returns (WriteResponse);
+    rpc PrimaryWrite(WriteRequest) returns (WriteResponse);
+    rpc ReplicateWrite(ReplicateWriteRequest) returns (SimpleResponse);
     rpc Read(ReadRequest) returns (ReadResponse);
     rpc Delete(DeleteRequest) returns (SimpleResponse);
-    rpc ReplicateWrite(ReplicateWriteRequest) returns (SimpleResponse);
-    rpc ReplicateDelete(DeleteRequest) returns (SimpleResponse);
+    rpc PrimaryDelete(DeleteRequest) returns (SimpleResponse);
+    rpc ReplicateDelete(ReplicateDeleteRequest) returns (SimpleResponse);
     rpc AddReplicaServer(AddReplicaServerRequest) returns (SimpleResponse);
 }

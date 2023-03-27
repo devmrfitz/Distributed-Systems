@@ -258,13 +258,3 @@ while True:
         if primary_server is not None and primary_server.ident is not None:
             pthread_kill(primary_server.ident, SIGKILL)
         break
-
-
-# Plot a distribution graph from a 1d list that is read from a file
-def plot_distribution_graph(filename):
-    with open(filename, "r") as f:
-        data = f.read().splitlines()
-        data = [int(x) for x in data]
-        data = np.array(data)
-        plt.hist(data, bins=100)
-        plt.show()

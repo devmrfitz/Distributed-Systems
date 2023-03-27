@@ -18,7 +18,10 @@ message FetchServerListResponse {
     bool success = 2;
 }
 
+message DummyRequest {
+}
+
 service RegistryServer {
     rpc Register(RegisterRequest) returns (RegisterResponse);
-    rpc FetchServerList() returns (FetchServerListResponse);
+    rpc FetchServerList(DummyRequest) returns (FetchServerListResponse);
 }
