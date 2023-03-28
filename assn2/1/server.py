@@ -31,9 +31,14 @@ class Server(server_pb2_grpc.ServerServicer):
         self.replica_servers.add(replica_server)
 
     def Write(self, request, context):
+        print("[INFO] Write called")
         uuid = request.uuid
+        name = request.name
         response = server_pb2.WriteResponse()
-        if uuid in self.my_data_store and not os.path.isfile(f"serverData/{SERVER_UUID}/{self.my_data_store[uuid][0]}"):
+        if uuid in self.my_data_store and self.my_data_store[uuid][0] != name:
+            response.success = False
+            response.status = "FILE NAME CANNOT BE CHANGED"
+        elif uuid in self.my_data_store and not os.path.isfile(f"serverData/{SERVER_UUID}/{name}"):
             response.success = False
             response.status = "DELETED FILE CANNOT BE UPDATED"
         elif uuid not in self.my_data_store and os.path.isfile(f"serverData/{SERVER_UUID}/{request.name}"):
@@ -47,6 +52,7 @@ class Server(server_pb2_grpc.ServerServicer):
         return response
 
     def Read(self, request, context):
+        print("[INFO] Read called")
         uuid = request.uuid
         response = server_pb2.ReadResponse()
         if uuid not in self.my_data_store:
@@ -65,8 +71,9 @@ class Server(server_pb2_grpc.ServerServicer):
         return response
 
     def Delete(self, request, context):
+        print("[INFO] Delete called")
         uuid = request.uuid
-        response = server_pb2.DeleteResponse()
+        response = server_pb2.SimpleResponse()
         if uuid not in self.my_data_store:
             response.success = False
             response.status = "FILE DOES NOT EXIST"
@@ -81,12 +88,15 @@ class Server(server_pb2_grpc.ServerServicer):
         return response
 
     def ReplicateWrite(self, request, context):
+        print("[INFO] ReplicaWrite called")
         self.my_data_store[request.uuid] = (request.name, request.version)
         with open(f"serverData/{SERVER_UUID}/{request.name}", "w") as f:
             f.write(request.content)
         return server_pb2.SimpleResponse(success=True)
 
     def PrimaryWrite(self, request, context):
+        print("[INFO] PrimaryWrite called")
+        print(f"[DEBUG] {self.replica_servers}")
         version = str(time.time())
         self.my_data_store[request.uuid] = (request.name, version)
         with open(f"serverData/{SERVER_UUID}/{request.name}", "w") as f:
@@ -105,6 +115,7 @@ class Server(server_pb2_grpc.ServerServicer):
         )
 
     def ReplicateDelete(self, request, context):
+        print("[INFO] ReplicaDelete called")
         os.remove(
             f"serverData/{SERVER_UUID}/{self.my_data_store[request.uuid][0]}")
         self.my_data_store[request.uuid] = (
@@ -112,6 +123,7 @@ class Server(server_pb2_grpc.ServerServicer):
         return server_pb2.SimpleResponse(success=True, status="SUCCESS")
 
     def PrimaryDelete(self, request, context):
+        print("[INFO] PrimaryDelete called")
         version = str(time.time())
         os.remove(
             f"serverData/{SERVER_UUID}/{self.my_data_store[request.uuid][0]}")
@@ -126,6 +138,7 @@ class Server(server_pb2_grpc.ServerServicer):
         return server_pb2.SimpleResponse(success=True, status="SUCCESS")
 
     def AddReplicaServer(self, request, context):
+        print("[INFO] AddReplicaServer called")
         self.add_replica_server(f"{request.ip}:{request.port}")
         return server_pb2.SimpleResponse(success=True)
 
@@ -143,6 +156,19 @@ def trigger_primary_server(primary_server, grpc_server):
     return primary_server
 
 
+def send_register_request(server_obj):
+    with grpc.insecure_channel(f"localhost:{REGISTRY_SERVER_PORT}", options=(('grpc.enable_http_proxy', 0),)) as channel:
+        registry_stub = registry_server_pb2_grpc.RegistryServerStub(
+            channel)
+        response = registry_stub.Register(registry_server_pb2.RegisterRequest(
+            ip="localhost",
+            port=int(SERVER_PORT)))
+        server_obj.set_primary_server(
+            f"{response.primaryIp}:{response.primaryPort}")
+    print(
+        "Registration request: SUCCESS" if response.success else "Registration request: FAIL")
+
+
 def serve():
     global primary_server
     os.mkdir(f"serverData/{SERVER_UUID}")
@@ -153,32 +179,24 @@ def serve():
     server.add_insecure_port(f"localhost:{SERVER_PORT}")
 
     primary_server = trigger_primary_server(primary_server, server)
+    send_register_request(server_obj)
 
     while True:
-        help_text = """
-        1. Send Register request
-        2. Run Primary server
-        3. Exit
-        """
-        print(help_text)
-        choice = int(input("Enter your choice: "))
-        if choice == 1:
-            with grpc.insecure_channel(f"localhost:{REGISTRY_SERVER_PORT}", options=(('grpc.enable_http_proxy', 0),)) as channel:
-                registry_stub = registry_server_pb2_grpc.RegistryServerStub(
-                    channel)
-                response = registry_stub.Register(registry_server_pb2.RegisterRequest(
-                    ip="localhost",
-                    port=int(SERVER_PORT)))
-                server_obj.set_primary_server(
-                    f"{response.primaryIp}:{response.primaryPort}")
-            print(
-                "Registration request: SUCCESS" if response.success else "Registration request: FAIL")
-
-        elif choice == 2:
-            primary_server = trigger_primary_server(primary_server, server)
-        elif choice == 3:
-            server.stop(0)
-            sys.exit(0)
+        time.sleep(100)
+        # help_text = """
+        # 1. Send Register request
+        # 2. Run Primary server
+        # 3. Exit
+        # """
+        # print(help_text)
+        # choice = int(input("Enter your choice: "))
+        # if choice == 1:
+        #     send_register_request(server_obj)
+        # elif choice == 2:
+        #     primary_server = trigger_primary_server(primary_server, server)
+        # elif choice == 3:
+        #     server.stop(0)
+        #     sys.exit(0)
 
 
 if __name__ == '__main__':

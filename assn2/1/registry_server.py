@@ -5,7 +5,9 @@
 import concurrent.futures
 import grpc
 import registry_server_pb2
+import server_pb2
 import registry_server_pb2_grpc
+import server_pb2_grpc
 import time
 from constants import REGISTRY_SERVER_PORT
 
@@ -23,6 +25,12 @@ class RegistryServer(registry_server_pb2_grpc.RegistryServerServicer):
         self.server_list.add(name)
         if self.primary is None:
             self.primary = name
+        else:
+            with grpc.insecure_channel(self.primary, options=(('grpc.enable_http_proxy', 0),)) as channel:
+                server_stub = server_pb2_grpc.ServerStub(
+                    channel)
+                server_stub.AddReplicaServer(
+                    server_pb2.AddReplicaServerRequest(ip=request.ip, port=request.port))
         response.primaryIp = self.primary.split(":")[0]
         response.primaryPort = int(self.primary.split(":")[1])
         print("JOIN REQUEST FROM ", name)
@@ -34,7 +42,7 @@ class RegistryServer(registry_server_pb2_grpc.RegistryServerServicer):
         response = registry_server_pb2.FetchServerListResponse()
         response.success = True
         for server in self.server_list:
-            response.getServerListResponse.servers.append(
+            response.serverList.append(
                 server)
         return response
 
