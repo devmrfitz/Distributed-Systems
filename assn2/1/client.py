@@ -9,6 +9,32 @@ from constants import REGISTRY_SERVER_PORT
 import server_pb2
 import server_pb2_grpc
 
+pipe_conn = None
+
+og_input = input
+og_print = print
+
+
+def proxy_input(msg=""):
+    if pipe_conn is None:
+        return og_input(msg)
+    else:
+        if msg:
+            print(msg, end="")
+        result = pipe_conn.recv()
+        return result
+
+
+def proxy_print(*args, **kwargs):
+    if pipe_conn is None:
+        return og_print(*args, **kwargs)
+    else:
+        return pipe_conn.send(" ".join(map(str, args)))
+
+
+input = proxy_input
+print = proxy_print
+
 
 class Client:
     def __init__(self) -> None:
@@ -118,5 +144,13 @@ class Client:
                 break
 
 
+def run(_pipe_conn=None):
+    global pipe_conn
+
+    pipe_conn = _pipe_conn
+    client = Client()
+    client.run()
+
+
 if __name__ == "__main__":
-    Client().run()
+    run()

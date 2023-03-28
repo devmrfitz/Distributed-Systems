@@ -15,6 +15,32 @@ from random import randint
 SERVER_PORT = str(randint(10000, 60000))
 SERVER_UUID = str(uuid.uuid4())
 
+pipe_conn = None
+
+og_input = input
+og_print = print
+
+
+def proxy_input(msg=""):
+    if pipe_conn is None:
+        return og_input(msg)
+    else:
+        if msg:
+            print(msg, end="")
+        result = pipe_conn.recv()
+        return result
+
+
+def proxy_print(*args):
+    if pipe_conn is None:
+        return og_print(*args)
+    else:
+        return pipe_conn.send(" ".join(map(str, args)))
+
+
+input = proxy_input
+print = proxy_print
+
 
 class Server(server_pb2_grpc.ServerServicer):
 
@@ -169,8 +195,11 @@ def send_register_request(server_obj):
         "Registration request: SUCCESS" if response.success else "Registration request: FAIL")
 
 
-def serve():
+def run(_pipe_conn=None):
     global primary_server
+    global pipe_conn
+
+    pipe_conn = _pipe_conn
     os.mkdir(f"serverData/{SERVER_UUID}")
     server_obj = Server()
 
@@ -183,21 +212,7 @@ def serve():
 
     while True:
         time.sleep(100)
-        # help_text = """
-        # 1. Send Register request
-        # 2. Run Primary server
-        # 3. Exit
-        # """
-        # print(help_text)
-        # choice = int(input("Enter your choice: "))
-        # if choice == 1:
-        #     send_register_request(server_obj)
-        # elif choice == 2:
-        #     primary_server = trigger_primary_server(primary_server, server)
-        # elif choice == 3:
-        #     server.stop(0)
-        #     sys.exit(0)
 
 
 if __name__ == '__main__':
-    serve()
+    run()

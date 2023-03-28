@@ -47,7 +47,7 @@ class RegistryServer(registry_server_pb2_grpc.RegistryServerServicer):
         return response
 
 
-def serve():
+def run():
     server = grpc.server(concurrent.futures.ThreadPoolExecutor(max_workers=10))
     registry_server_pb2_grpc.add_RegistryServerServicer_to_server(
         RegistryServer(), server)
@@ -61,4 +61,4 @@ def serve():
 
 
 if __name__ == '__main__':
-    serve()
+    run()
